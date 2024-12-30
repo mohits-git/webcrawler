@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -18,26 +19,16 @@ func main() {
   }
 
   base_url := args[0]
+	base_url = strings.TrimSuffix(base_url, "/")
+
   fmt.Println("starting crawl of:", base_url)
 
-	pageHtml, err := getHTML(base_url)
-	if err != nil {
-		fmt.Println("Error getting HTML:\n", err)
-		os.Exit(1)
+	pages := make(map[string]int)
+	crawlPage(base_url, base_url, pages)
+
+	fmt.Println("\nCrawling Results: ")
+	fmt.Println("Internal Pages Links: ")
+	for page, count := range pages {
+		fmt.Printf(" - %d: %s\n", count, page)
 	}
-
-	fmt.Println(pageHtml)
-
-	// links, err := getURLsFromHTML(pageHtml, base_url)
-	// if err != nil {
-	// 	fmt.Println("Error getting URLs from HTML:\n", err)
-	// 	os.Exit(1)
-	// }
-	//
-	// fmt.Println("Links found: ")
-	// for _, link := range links {
-	// 	fmt.Println(" - ", link)
-	// }
-	//
-	// fmt.Println("Crawl complete")
 }
