@@ -4,27 +4,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
-	"time"
 )
 
 func getHTML(rawUrl string) (string, error){
-  parsedUrl, err := url.Parse(rawUrl)
-  if err != nil {
-    return "", fmt.Errorf("failed to parse url: %v", err)
-  }
-
-  client := &http.Client{
-    Timeout: 5 * time.Second,
-  }
-
-  req, err := http.NewRequest("GET", parsedUrl.String(), nil)
-  if err != nil {
-    return  "", fmt.Errorf("failed to create request: %v", err)
-  }
-
-  resp, err := client.Do(req)
+	resp, err := http.Get(rawUrl)
   if err != nil {
     return "", fmt.Errorf("failed to get response: %v", err)
   }
