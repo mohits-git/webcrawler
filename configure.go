@@ -7,6 +7,7 @@ import (
 )
 
 type config struct {
+	maxPages           int
 	pages              map[string]int
 	baseUrl            *url.URL
 	mu                 *sync.Mutex
@@ -33,13 +34,21 @@ func (cfg *config) addPageVisits(rawCurrentUrl string) (isFirst bool) {
 	return true
 }
 
-func configure(base_url string, maxConcurrency int) (*config, error) {
+func (cfg *config) getPagesLength() int {
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
+
+	return len(cfg.pages)
+}
+
+func configure(base_url string, maxConcurrency, maxPages int) (*config, error) {
 	baseUrl, err := url.Parse(base_url)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing base URL:\n %v", err)
 	}
 
 	cfg := config{
+		maxPages:           maxPages,
 		pages:              make(map[string]int),
 		baseUrl:            baseUrl,
 		mu:                 &sync.Mutex{},

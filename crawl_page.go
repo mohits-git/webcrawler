@@ -12,6 +12,11 @@ func (cfg *config) crawlPage(rawCurrentUrl string) {
 		<-cfg.concurrencyControl
 	}()
 
+	pagesVisited := cfg.getPagesLength()
+	if pagesVisited >= cfg.maxPages {
+		return
+	}
+
 	parsedCurrentUrl, err := url.Parse(rawCurrentUrl)
 	if err != nil {
 		fmt.Printf("Error parsing current URL: %v\n", err)
