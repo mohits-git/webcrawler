@@ -3,15 +3,14 @@ package main
 import (
 	"fmt"
 	"net/url"
-	"strings"
 )
 
-func crawlPage(rawBaseUrl, rawCurrentUrl string, pages map[string]int) {
-	pasrsedBaseUrl, err := url.Parse(rawBaseUrl)
-	if err != nil {
-		fmt.Printf("Error parsing base URL: %v\n", err)
-		return
-	}
+func (cfg *config) crawlPage(rawCurrentUrl string) {
+	cfg.concurrencyControl <- struct{}{}
+	defer func() {
+		cfg.wg.Done()
+		<-cfg.concurrencyControl
+	}()
 
 	parsedCurrentUrl, err := url.Parse(rawCurrentUrl)
 	if err != nil {
@@ -19,44 +18,51 @@ func crawlPage(rawBaseUrl, rawCurrentUrl string, pages map[string]int) {
 		return
 	}
 
-	if parsedCurrentUrl.Hostname() != pasrsedBaseUrl.Hostname() {
+	if parsedCurrentUrl.Hostname() != cfg.baseUrl.Hostname() {
 		return
 	}
 
-  currentUrl, err := normalizeURL(rawCurrentUrl)
-  if err != nil {
+	if isFirst := cfg.addPageVisits(rawCurrentUrl); !isFirst {
+		return
+	}
+
+	fmt.Println("Crawling", rawCurrentUrl)
+
+	pageHtml, err := getHTML(rawCurrentUrl)
+	if err != nil {
+		fmt.Printf("Error getting HTML from %s :\n %v\n", rawCurrentUrl, err)
+		return
+	}
+
+	links, err := getURLsFromHTML(pageHtml, rawCurrentUrl)
+	if err != nil {
+		fmt.Printf("Error getting URLs from HTML of %s :\n %v\n", rawCurrentUrl, err)
+		return
+	}
+
+	for _, link := range links {
+		cfg.wg.Add(1)
+		go cfg.crawlPage(link)
+	}
+
+	fmt.Println("Crawl complete for", rawCurrentUrl)
+}
+
+func (cfg *config) addPageVisits(rawCurrentUrl string) (isFirst bool) {
+	currentUrl, err := normalizeURL(rawCurrentUrl)
+	if err != nil {
 		fmt.Println("Error normalizing URL:", rawCurrentUrl, "\n", err)
-    return
-  }
+		return
+	}
 
-  if !strings.HasPrefix(rawCurrentUrl, rawBaseUrl) {
-    return
-  }
+	cfg.mu.Lock()
+	defer cfg.mu.Unlock()
 
-  if c, ok := pages[currentUrl]; ok {
-    pages[currentUrl] = c+1;
-    return;
-  } else {
-    pages[currentUrl] = 1
-  }
+	if c, ok := cfg.pages[currentUrl]; ok {
+		cfg.pages[currentUrl] = c + 1
+		return
+	}
 
-  fmt.Println("Crawling", rawCurrentUrl)
-
-  pageHtml, err := getHTML(rawCurrentUrl)
-  if err != nil {
-    fmt.Printf("Error getting HTML from %s :\n %v\n", rawCurrentUrl, err)
-    return
-  }
-
-  links, err := getURLsFromHTML(pageHtml, rawCurrentUrl)
-  if err != nil {
-    fmt.Printf("Error getting URLs from HTML of %s :\n %v\n", rawCurrentUrl, err)
-    return
-  }
-
-  for _, link := range links {
-    crawlPage(rawBaseUrl, link, pages)
-  }
-
-  fmt.Println("Crawl complete for", rawCurrentUrl)
+	cfg.pages[currentUrl] = 1
+	return true
 }
