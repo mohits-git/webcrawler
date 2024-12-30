@@ -35,7 +35,7 @@ func (cfg *config) crawlPage(rawCurrentUrl string) {
 
 	pageHtml, err := getHTML(rawCurrentUrl)
 	if err != nil {
-		fmt.Printf("Error getting HTML from %s :\n %v\n", rawCurrentUrl, err)
+		fmt.Printf("html not found for %s\n", rawCurrentUrl)
 		return
 	}
 
@@ -49,6 +49,4 @@ func (cfg *config) crawlPage(rawCurrentUrl string) {
 		cfg.wg.Add(1)
 		go cfg.crawlPage(link)
 	}
-
-	fmt.Println("Crawl complete for", rawCurrentUrl)
 }
